@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Ernesto Cruz
 
 # StudySync
@@ -102,3 +103,4 @@ Tools
 - Testing
 - Debugging
 - Documentation
+=======
