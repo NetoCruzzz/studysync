@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-Ernesto Cruz
+Project By: Ernesto Cruz, David Clifton, Guillermo Cortez
 
 # StudySync
 
