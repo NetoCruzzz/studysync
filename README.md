@@ -1,6 +1,5 @@
-Project By: Ernesto Cruz, David Clifton, Guillermo Cortez
-
 # StudySync
+Project By: Ernesto Cruz, David Clifton, Guillermo Cortez
 
 ## Project Overview
 
@@ -22,26 +21,26 @@ The main objectives of this project are:
 ## Core Features |
 ##               |
 ##               V
-### User Management
+### User Management (Secure registration, login/logout, and profile management.)
 - Register account
 - Login/logout
 - Edit user profile
 - Delete account
 
-### Task Management
+### Task Management (A schedule manager to add, view, edit, and delete weekly activities.)
 - Create tasks
 - View tasks
 - Edit tasks
 - Delete tasks
 - Mark tasks as completed
 
-### Social Feed
+### Social Feed (A bulletin board system where users browse and post updates or announcements.)
 - Post progress updates
 - View updates from other users
 - Comment on posts
 - Like posts
 
-### Accountability Groups
+### Accountability Groups (Features to create or join groups and share progress with members.)
 - Create groups
 - Join groups
 - Share progress with group members
@@ -70,35 +69,34 @@ Tools
 ---
 
 ## Agile Development Plan
-
-### Sprint 1 – Project Setup
+### Sprint 1 – Project Setup (repository initialization, and requirements definition.)
 - Create repository
 - Define project requirements
 - Setup development environment
 - Write documentation
 
-### Sprint 2 – User System
+### Sprint 2 – User System (Developing User Stories and Wireframes for the Home view)
 - User registration
 - Login and authentication
 - Profile management
 
-### Sprint 3 – Task Management
+### Sprint 3 – Task Management (Implementing core CRUD functionality for task management.)
 - Create tasks
 - Edit tasks
 - Delete tasks
 - Mark tasks complete
 
-### Sprint 4 – Social Features
+### Sprint 4 – Social Features (Development of the social feed and commenting system)
 - Create posts
 - Comment system
 - Social feed display
 
-### Sprint 5 – Groups
+### Sprint 5 – Groups (Finalizing group creation and sharing features.)
 - Create accountability groups
 - Join groups
 - Group activity feed
 
-### Sprint 6 – Finalization
+### Sprint 6 – Finalization (Full system testing, debugging, and final documentation)
 - Testing
 - Debugging
 - Documentation
