@@ -2,43 +2,57 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 
-function Login() {
+function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
 
-    // validation
     if (!username || !email || !password) {
-      setError('Please fill in all fields');
+      setMessage('Please fill in all fields');
       return;
     }
 
-    setError('');
+    try {
+      const response = await fetch('http://localhost:5000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
 
-    // TEMP login (frontend only for now)
-    navigate('/dashboard', {
-      state: {
-        username: username,
-        email: email
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message || 'Registration failed');
+        return;
       }
-    });
+
+      setMessage('Registration successful!');
+
+      // redirect to login after success
+      setTimeout(() => {
+        navigate('/');
+      }, 1500);
+
+    } catch (err) {
+      setMessage('Server error');
+    }
   };
 
   return (
     <div className="login-container">
       <div className="login-card">
         <h1>StudySync</h1>
-        <h3>Login</h3>
+        <h3>Register</h3>
 
-        {error && <p className="error-text">{error}</p>}
+        {message && <p className="error-text">{message}</p>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleRegister}>
           <input
             className="login-input"
             type="text"
@@ -64,21 +78,12 @@ function Login() {
           />
 
           <button className="login-button" type="submit">
-            Login
+            Register
           </button>
         </form>
-
-        <br />
-
-        <button
-          className="login-button"
-          onClick={() => navigate('/register')}
-        >
-          Register
-        </button>
       </div>
     </div>
   );
 }
 
-export default Login;
+export default Register;
