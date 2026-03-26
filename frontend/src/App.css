@@ -2,7 +2,7 @@
   text-align: center;
 }
 
-/* ===== EXISTING HEADER (keep for now) ===== */
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -13,7 +13,6 @@
   color: white;
 }
 
-/* ===== NEW LOGIN STYLES ===== */
 .login-container {
   height: 100vh;
   display: flex;
@@ -53,7 +52,6 @@
   margin-bottom: 10px;
 }
 
-/* ===== DASHBOARD ===== */
 .dashboard-container {
   height: 100vh;
   display: flex;

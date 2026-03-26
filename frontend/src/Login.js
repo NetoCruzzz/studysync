@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './App.css';
 
 function Login() {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,15 +12,20 @@ function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    // validation
+    if (!username || !email || !password) {
       setError('Please fill in all fields');
       return;
     }
 
     setError('');
 
+    // simulate login + pass user data
     navigate('/dashboard', {
-      state: { email }
+      state: {
+        username: username,
+        email: email
+      }
     });
   };
 
@@ -32,6 +38,14 @@ function Login() {
         {error && <p className="error-text">{error}</p>}
 
         <form onSubmit={handleSubmit}>
+          <input
+            className="login-input"
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+
           <input
             className="login-input"
             type="email"
