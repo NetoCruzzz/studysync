@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const express = require('express');
 const app = express();
 const PORT = 5000;
@@ -9,3 +10,8 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Connect to MongoDB
+mongoose.connect('mongodb://localhost:27017/studysync')
+.then(() => console.log('MongoDB connected!'))
+.catch((err) => console.error('MongoDB connection error:', err));
