@@ -1,67 +1,104 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './App.css';
 
-function Register() {
-  const navigate = useNavigate();
+function Tasks() {
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState('');
+  const [editIndex, setEditIndex] = useState(null);
 
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const handleAddTask = async () => {
+    if (!newTask) return;
 
-  const handleRegister = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      await fetch('http://localhost:5000/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
+        body: JSON.stringify({ text: newTask })
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        alert('Registered successfully!');
-        navigate('/');
-      } else {
-        alert(data.message || 'Registration failed');
-      }
+      setTasks([...tasks, { text: newTask, completed: false }]);
+      setNewTask('');
     } catch (err) {
       console.log(err);
-      alert('Server error');
     }
   };
 
+  const handleDelete = async (index) => {
+    await fetch(`http://localhost:5000/api/tasks/${index}`, {
+      method: 'DELETE'
+    });
+
+    setTasks(tasks.filter((_, i) => i !== index));
+  };
+
+  const handleToggle = async (index) => {
+    await fetch(`http://localhost:5000/api/tasks/${index}`, {
+      method: 'PUT'
+    });
+
+    const updated = [...tasks];
+    updated[index].completed = !updated[index].completed;
+    setTasks(updated);
+  };
+
+  const handleEdit = (index) => {
+    setNewTask(tasks[index].text);
+    setEditIndex(index);
+  };
+
+  const handleSaveEdit = async () => {
+    await fetch(`http://localhost:5000/api/tasks/${editIndex}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: newTask })
+    });
+
+    const updated = [...tasks];
+    updated[editIndex].text = newTask;
+
+    setTasks(updated);
+    setEditIndex(null);
+    setNewTask('');
+  };
+
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1>StudySync</h1>
-        <h3>Register</h3>
+    <div>
+      <h2>Task Manager</h2>
 
-        <input
-          className="login-input"
-          placeholder="Username"
-          onChange={(e) => setUsername(e.target.value)}
-        />
+      <input
+        className="login-input"
+        placeholder="Enter task..."
+        value={newTask}
+        onChange={(e) => setNewTask(e.target.value)}
+      />
 
-        <input
-          className="login-input"
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          className="login-input"
-          type="password"
-          placeholder="Password"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button className="login-button" onClick={handleRegister}>
-          Register
+      {editIndex === null ? (
+        <button className="login-button" onClick={handleAddTask}>
+          Add Task
         </button>
-      </div>
+      ) : (
+        <button className="login-button" onClick={handleSaveEdit}>
+          Save Edit
+        </button>
+      )}
+
+      <hr className="divider" />
+
+      {tasks.map((task, i) => (
+        <div key={i} className="task-row">
+          <span className={`task-text ${task.completed ? 'completed' : ''}`}>
+            {task.text}
+          </span>
+
+          <div>
+            <button className="task-btn" onClick={() => handleToggle(i)}>✔</button>
+            <button className="task-btn" onClick={() => handleEdit(i)}>✏️</button>
+            <button className="task-btn delete" onClick={() => handleDelete(i)}>✖</button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-export default Register;
+export default Tasks;
