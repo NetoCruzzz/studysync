@@ -1,68 +1,37 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Tasks from './Tasks';
 import './App.css';
 
 function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-
   const user = location.state;
-
-  const [editMode, setEditMode] = useState(false);
-  const [username, setUsername] = useState(user?.username || '');
-  const [email, setEmail] = useState(user?.email || '');
-
-  const handleLogout = () => {
-    navigate('/');
-  };
-
-  const handleSave = () => {
-    setEditMode(false);
-  };
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-card">
         <h1>Dashboard</h1>
 
-        {user ? (
+        {user && (
           <>
-            <h3>Profile</h3>
-
-            {editMode ? (
-              <>
-                <input
-                  className="login-input"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-
-                <input
-                  className="login-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-
-                <button className="login-button" onClick={handleSave}>
-                  Save
-                </button>
-              </>
-            ) : (
-              <>
-                <p><strong>Username:</strong> {username}</p>
-                <p><strong>Email:</strong> {email}</p>
-
-                <button className="login-button" onClick={() => setEditMode(true)}>
-                  Edit Profile
-                </button>
-              </>
-            )}
+            <p><strong>Username:</strong> {user.username}</p>
+            <p><strong>Email:</strong> {user.email}</p>
           </>
-        ) : (
-          <p>No user data available</p>
         )}
 
-        <button className="logout-btn" onClick={handleLogout}>
+        <button
+          className="login-button secondary-btn"
+          onClick={() => navigate('/profile', { state: user })}
+        >
+          Edit Profile
+        </button>
+
+        <hr className="divider" />
+
+        <Tasks />
+
+        <button className="logout-btn" onClick={() => navigate('/')}>
           Logout
         </button>
       </div>
