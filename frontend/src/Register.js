@@ -34,7 +34,6 @@ function Register() {
 
       setMessage('Registration successful!');
 
-      // redirect to login after success
       setTimeout(() => {
         navigate('/');
       }, 1500);
