@@ -3,43 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import './App.css';
 
 function Register() {
+  const navigate = useNavigate();
+
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
 
-  const navigate = useNavigate();
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-
-    if (!username || !email || !password) {
-      setMessage('Please fill in all fields');
-      return;
-    }
-
+  const handleRegister = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/register', {
+      const res = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password })
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (!response.ok) {
-        setMessage(data.message || 'Registration failed');
-        return;
-      }
-
-      setMessage('Registration successful!');
-
-      setTimeout(() => {
+      if (res.ok) {
+        alert('Registered successfully!');
         navigate('/');
-      }, 1500);
-
+      } else {
+        alert(data.message || 'Registration failed');
+      }
     } catch (err) {
-      setMessage('Server error');
+      console.log(err);
+      alert('Server error');
     }
   };
 
@@ -49,37 +37,28 @@ function Register() {
         <h1>StudySync</h1>
         <h3>Register</h3>
 
-        {message && <p className="error-text">{message}</p>}
+        <input
+          className="login-input"
+          placeholder="Username"
+          onChange={(e) => setUsername(e.target.value)}
+        />
 
-        <form onSubmit={handleRegister}>
-          <input
-            className="login-input"
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+        <input
+          className="login-input"
+          placeholder="Email"
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-          <input
-            className="login-input"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+        <input
+          className="login-input"
+          type="password"
+          placeholder="Password"
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-          <input
-            className="login-input"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button className="login-button" type="submit">
-            Register
-          </button>
-        </form>
+        <button className="login-button" onClick={handleRegister}>
+          Register
+        </button>
       </div>
     </div>
   );

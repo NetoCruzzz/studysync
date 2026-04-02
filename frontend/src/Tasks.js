@@ -1,80 +1,67 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './App.css';
 
-function Tasks() {
-  const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState('');
-  const [editIndex, setEditIndex] = useState(null);
+function Register() {
+  const navigate = useNavigate();
 
-  const handleAddTask = () => {
-    if (!newTask) return;
-    setTasks([...tasks, { text: newTask, completed: false }]);
-    setNewTask('');
-  };
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleDelete = (index) => {
-    setTasks(tasks.filter((_, i) => i !== index));
-  };
+  const handleRegister = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
 
-  const handleToggle = (index) => {
-    const updated = [...tasks];
-    updated[index].completed = !updated[index].completed;
-    setTasks(updated);
-  };
+      const data = await res.json();
 
-  const handleEdit = (index) => {
-    setNewTask(tasks[index].text);
-    setEditIndex(index);
-  };
-
-  const handleSaveEdit = () => {
-    const updated = [...tasks];
-    updated[editIndex].text = newTask;
-    setTasks(updated);
-    setEditIndex(null);
-    setNewTask('');
+      if (res.ok) {
+        alert('Registered successfully!');
+        navigate('/');
+      } else {
+        alert(data.message || 'Registration failed');
+      }
+    } catch (err) {
+      console.log(err);
+      alert('Server error');
+    }
   };
 
   return (
-    <div>
-      <h2>Task Manager</h2>
+    <div className="login-container">
+      <div className="login-card">
+        <h1>StudySync</h1>
+        <h3>Register</h3>
 
-      <input
-        className="login-input"
-        placeholder="Enter task..."
-        value={newTask}
-        onChange={(e) => setNewTask(e.target.value)}
-      />
+        <input
+          className="login-input"
+          placeholder="Username"
+          onChange={(e) => setUsername(e.target.value)}
+        />
 
-      {editIndex === null ? (
-        <button className="login-button" onClick={handleAddTask}>
-          Add Task
+        <input
+          className="login-input"
+          placeholder="Email"
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          className="login-input"
+          type="password"
+          placeholder="Password"
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <button className="login-button" onClick={handleRegister}>
+          Register
         </button>
-      ) : (
-        <button className="login-button" onClick={handleSaveEdit}>
-          Save Edit
-        </button>
-      )}
-
-      <hr className="divider" />
-
-      {tasks.length === 0 && <p>No tasks yet</p>}
-
-      {tasks.map((task, i) => (
-        <div key={i} className="task-row">
-          <span className={`task-text ${task.completed ? 'completed' : ''}`}>
-            {task.text}
-          </span>
-
-          <div>
-            <button className="task-btn" onClick={() => handleToggle(i)}>✔</button>
-            <button className="task-btn" onClick={() => handleEdit(i)}>✏️</button>
-            <button className="task-btn delete" onClick={() => handleDelete(i)}>✖</button>
-          </div>
-        </div>
-      ))}
+      </div>
     </div>
   );
 }
 
-export default Tasks;
+export default Register;
