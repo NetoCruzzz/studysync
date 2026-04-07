@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Tasks from './Tasks';
 import './App.css';
 
 function Dashboard() {
@@ -7,22 +8,30 @@ function Dashboard() {
   const location = useLocation();
   const user = location.state;
 
-  const handleLogout = () => {
-    navigate('/');
-  };
-
   return (
     <div className="dashboard-container">
       <div className="dashboard-card">
         <h1>Dashboard</h1>
 
-        {user ? (
-          <p>Welcome, {user.email} 🎯</p>
-        ) : (
-          <p>No user data available</p>
+        {user && (
+          <>
+            <p><strong>Username:</strong> {user.username}</p>
+            <p><strong>Email:</strong> {user.email}</p>
+          </>
         )}
 
-        <button className="logout-btn" onClick={handleLogout}>
+        <button
+          className="login-button secondary-btn"
+          onClick={() => navigate('/profile', { state: user })}
+        >
+          Edit Profile
+        </button>
+
+        <hr className="divider" />
+
+        <Tasks />
+
+        <button className="logout-btn" onClick={() => navigate('/')}>
           Logout
         </button>
       </div>
