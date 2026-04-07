@@ -7,6 +7,10 @@ const PORT = 5000;
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 
+// Enable CORS for all routes
+const cors = require('cors');
+app.use(cors());
+
 // Import authentication routes from the auth folder
 const authRoutes = require('./auth'); // Adjust the path if needed
 
