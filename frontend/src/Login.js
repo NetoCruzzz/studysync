@@ -7,6 +7,8 @@ function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
 
   const handleLogin = async () => {
     try {
@@ -19,14 +21,17 @@ function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        alert('Login successful!');
-        navigate('/dashboard');
+        setMessage('Login successful!');
+        setMessageType('success');
+        setTimeout(() => navigate('/dashboard'), 1500); // Delay navigation to show message
       } else {
-        alert(data.error || data.message || 'Login failed');
+        setMessage(data.error || data.message || 'Login failed');
+        setMessageType('error');
       }
     } catch (err) {
-      alert("Backend not connected — simulating login");
-      navigate('/dashboard', { state: { username } });
+      setMessage("Backend not connected — simulating login");
+      setMessageType('error');
+      setTimeout(() => navigate('/dashboard', { state: { username } }), 1500);
     }
   };
 
@@ -35,6 +40,12 @@ function Login() {
       <div className="login-card">
         <h1>StudySync</h1>
         <h3>Login</h3>
+
+        {message && (
+          <div className={`message ${messageType}`}>
+            {message}
+          </div>
+        )}
 
         <input
           className="login-input"

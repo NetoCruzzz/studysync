@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Tasks from './Tasks';
 import './App.css';
+import { Link } from 'react-router-dom';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -30,6 +31,12 @@ function Dashboard() {
         <hr className="divider" />
 
         <Tasks />
+
+        <div className="dashboard-actions">
+          <Link className="nav-button" to="/feed">
+            Go to Social Feed
+          </Link>
+        </div>
 
         <button className="logout-btn" onClick={() => navigate('/')}>
           Logout

@@ -8,8 +8,11 @@ function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
 
   const handleRegister = async () => {
+    
     try {
       const res = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
@@ -20,21 +23,21 @@ function Register() {
       const data = await res.json();
 
       if (res.ok) {
-        alert('Registered successfully!');
-        navigate('/');
+        setMessage('Registered successfully!');
+        setMessageType('success');
+        setTimeout(() => navigate('/'), 1500); // Delay navigation to show message
       } else {
-        alert(data.message || 'Registration failed');
+        setMessage(data.message || 'Registration failed');
+        setMessageType('error');
       }
 
     } catch (err) {
       console.log("Backend not running — fallback mode");
 
       // ✅ FALLBACK (so you’re not blocked)
-      alert("Backend not connected — simulating registration");
-
-      navigate('/dashboard', {
-        state: { username, email }
-      });
+      setMessage("Backend not connected — simulating registration");
+      setMessageType('error');
+      setTimeout(() => navigate('/dashboard', { state: { username, email } }), 1500);
     }
   };
 
@@ -43,6 +46,12 @@ function Register() {
       <div className="login-card">
         <h1>StudySync</h1>
         <h3>Register</h3>
+
+        {message && (
+          <div className={`message ${messageType}`}>
+            {message}
+          </div>
+        )}
 
         <input
           className="login-input"
