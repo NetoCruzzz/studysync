@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
+import { apiFetch } from './api';
 
 const defaultPosts = [
   {
@@ -25,18 +26,23 @@ const defaultPosts = [
 ];
 
 const STORAGE_KEY = 'studysync_feed_posts';
+const USER_KEY = 'studysync_user';
 
 function Feed() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const savedUser = JSON.parse(window.localStorage.getItem(USER_KEY) || 'null');
+  const currentUser = location.state?.username || savedUser?.username || 'You';
+
   const [posts, setPosts] = useState(defaultPosts);
   const [newPost, setNewPost] = useState('');
   const [commentText, setCommentText] = useState({});
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored) {
       setPosts(JSON.parse(stored));
       setLoading(false);
@@ -45,8 +51,7 @@ function Feed() {
 
     const loadFeed = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/feed');
-        const data = await res.json();
+        const { response: res, data } = await apiFetch('/api/feed');
         if (res.ok) {
           const serverPosts = Array.isArray(data.posts)
             ? data.posts
@@ -61,12 +66,11 @@ function Feed() {
         setLoading(false);
       }
     };
-
     loadFeed();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
   }, [posts]);
 
   const showStatus = (message) => {
@@ -80,7 +84,7 @@ function Feed() {
 
     const created = {
       id: Date.now(),
-      author: 'You',
+      author: currentUser,
       content: trimmed,
       comments: [],
       likes: 0,
@@ -92,7 +96,7 @@ function Feed() {
     showStatus('Post created');
 
     try {
-      await fetch('http://localhost:5000/api/feed', {
+      await apiFetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: trimmed })
@@ -111,7 +115,7 @@ function Feed() {
         post.id === postId
           ? {
               ...post,
-              comments: [...post.comments, { id: Date.now(), author: 'You', text }]
+              comments: [...post.comments, { id: Date.now(), author: currentUser, text }]
             }
           : post
       )
@@ -121,7 +125,7 @@ function Feed() {
     showStatus('Comment added');
 
     try {
-      await fetch(`http://localhost:5000/api/feed/${postId}/comment`, {
+      await apiFetch(`/api/feed/${postId}/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
@@ -135,10 +139,8 @@ function Feed() {
     setPosts((prev) =>
       prev.map((post) => {
         if (post.id !== postId) return post;
-
         const likedByMe = !post.likedByMe;
         const likes = likedByMe ? post.likes + 1 : Math.max(post.likes - 1, 0);
-
         return { ...post, likedByMe, likes };
       })
     );
@@ -163,7 +165,7 @@ function Feed() {
             className="login-input"
             rows="4"
             value={newPost}
-            placeholder="Share an update with your StudySync friends..."
+            placeholder={`Share an update, ${currentUser}...`}
             onChange={(e) => setNewPost(e.target.value)}
           />
           <button className="login-button" onClick={handleCreatePost}>
@@ -181,12 +183,8 @@ function Feed() {
               </div>
               <p>{post.content}</p>
 
-              <div className="post-actions" style={{ marginBottom: '14px' }}>
-                <button
-                  className="task-btn"
-                  style={{ width: 'auto' }}
-                  onClick={() => handleToggleLike(post.id)}
-                >
+              <div className="post-actions">
+                <button className="task-btn" onClick={() => handleToggleLike(post.id)}>
                   {post.likedByMe ? 'Unlike' : 'Like'} ({post.likes})
                 </button>
               </div>
@@ -215,10 +213,7 @@ function Feed() {
                       }))
                     }
                   />
-                  <button
-                    className="login-button"
-                    onClick={() => handleAddComment(post.id)}
-                  >
+                  <button className="login-button" onClick={() => handleAddComment(post.id)}>
                     Comment
                   </button>
                 </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
-
+import { apiFetch } from './api';
 
 function Login() {
   const navigate = useNavigate();
@@ -10,28 +10,43 @@ function Login() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState(''); // 'success' or 'error'
 
+  const saveUser = (userObject) => {
+    window.localStorage.setItem('studysync_user', JSON.stringify(userObject));
+  };
+
   const handleLogin = async () => {
+    if (!username || !password) {
+      setMessage('Please enter username and password.');
+      setMessageType('error');
+      return;
+    }
+
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const { response: res, data } = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
 
-      const data = await res.json();
-
       if (res.ok) {
+        const userObject = {
+          username: data.username || username,
+          email: data.email || ''
+        };
+        saveUser(userObject);
         setMessage('Login successful!');
         setMessageType('success');
-        setTimeout(() => navigate('/dashboard'), 1500); // Delay navigation to show message
+        setTimeout(() => navigate('/dashboard', { state: userObject }), 700);
       } else {
-        setMessage(data.error || data.message || 'Login failed');
+        setMessage(data?.message || 'Login failed');
         setMessageType('error');
       }
     } catch (err) {
-      setMessage("Backend not connected — simulating login");
-      setMessageType('error');
-      setTimeout(() => navigate('/dashboard', { state: { username } }), 1500);
+      const userObject = { username, email: '' };
+      saveUser(userObject);
+      setMessage('Backend not connected — simulating login');
+      setMessageType('success');
+      setTimeout(() => navigate('/dashboard', { state: userObject }), 1500);
     }
   };
 
@@ -50,12 +65,14 @@ function Login() {
         <input
           className="login-input"
           placeholder="Username"
+          value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
         <input
           className="login-input"
           type="password"
           placeholder="Password"
+          value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <button className="login-button" onClick={handleLogin}>
@@ -76,4 +93,3 @@ function Login() {
 }
 
 export default Login;
-     
