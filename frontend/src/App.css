@@ -239,6 +239,18 @@ p, small, .task-text, .activity-row {
   color: #ffd7dc;
 }
 
+.meta-footer {
+  margin: 30px auto 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px 18px;
+  border-radius: 18px;
+  max-width: 980px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .message.info {
   background: rgba(86, 225, 255, 0.16);
   color: #ddf7ff;
@@ -444,34 +456,16 @@ p, small, .task-text, .activity-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+  margin-bottom: 28px;
 }
 
 .group-feed {
-  padding: 22px;
-}
-
-.group-feed-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 16px;
-}
-
-.activity-feed .feed-post {
-  padding: 18px;
-}
-
-.activity-feed .post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  padding: 28px;
 }
 
 .all-activity-panel {
-  padding: 22px;
+  padding: 26px;
+  margin-top: 24px;
 }
 
 .feed-header button {
@@ -517,4 +511,33 @@ p, small, .task-text, .activity-row {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+.groups-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.profile-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  text-align: left;
+}
+
+.form-label {
+  color: #c8d2ff;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.profile-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.profile-actions .secondary-btn {
+  width: 100%;
 }

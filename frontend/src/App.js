@@ -5,6 +5,7 @@ import Register from './Register';
 import Dashboard from './Dashboard';
 import Feed from './Feed';
 import Groups from './Groups';
+import Profile from './Profile';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/groups" element={<Groups />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );
