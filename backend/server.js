@@ -14,8 +14,20 @@ app.use(cors());
 // Import authentication routes from the auth folder
 const authRoutes = require('./auth'); // Adjust the path if needed
 
+// Import tasks router
+const tasksRouter = require('./tasks');
+
+// Import feed router
+const feedRouter = require('./auth/routes/feed');
+
 // Mount the authentication routes at /api/auth
 app.use('/api/auth', authRoutes);
+
+// Mount the tasks routes at /api/tasks
+app.use('/api/tasks', tasksRouter);
+
+// Mount the feed routes at /api/feed
+app.use('/api/feed', feedRouter);
 
 // Default route for testing if the API is running
 app.get('/', (req, res) => {
