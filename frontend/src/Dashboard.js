@@ -36,6 +36,16 @@ function Dashboard() {
           </>
         )}
 
+        <div className="dashboard-banner">
+          <div>
+            <strong>Quick group actions</strong>
+            <p>Jump to group management to create, join, or review activity faster.</p>
+          </div>
+          <Link className="nav-button" to="/groups">
+            Go to Groups
+          </Link>
+        </div>
+
         <div className="dashboard-summary">
           <div className="dashboard-stat">
             <strong>{joinedGroups.length}</strong>
@@ -47,29 +57,39 @@ function Dashboard() {
           </div>
         </div>
 
-        {joinedGroups.length > 0 && (
-          <div className="dashboard-mini-card">
-            <h3>My groups</h3>
-            <div className="group-chip-row">
+        <div className="dashboard-mini-card">
+          <h3>My accountability groups</h3>
+          {joinedGroups.length === 0 ? (
+            <div className="empty-state">
+              You haven't joined any groups yet. Go to Groups to join or create one.
+            </div>
+          ) : (
+            <div className="group-list">
               {joinedGroups.map((group) => (
-                <span key={group.id} className="group-chip">
-                  {group.name}
-                </span>
+                <div key={group.id} className="group-list-item">
+                  <strong>{group.name}</strong>
+                  <p>{group.description}</p>
+                  <small>{group.members.length} members</small>
+                </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {recentActivity.length > 0 && (
-          <div className="dashboard-mini-card">
-            <h3>Recent activity</h3>
-            {recentActivity.map((item) => (
+        <div className="dashboard-mini-card">
+          <h3>Recent group activity</h3>
+          {recentActivity.length === 0 ? (
+            <div className="empty-state">
+              No recent activity in your joined groups yet.
+            </div>
+          ) : (
+            recentActivity.map((item) => (
               <div key={item.id} className="activity-row">
                 <strong>{item.author}</strong> in <em>{item.groupName}</em>: {item.text}
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
 
         <button
           className="login-button secondary-btn"

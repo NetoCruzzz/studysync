@@ -9,8 +9,8 @@ const DEFAULT_GROUPS = [
     description: 'Weekly problem-solving study sessions.',
     members: ['Alex', 'Sofia'],
     activity: [
-      { id: 101, author: 'Alex', text: 'Shared a geometry study guide.', time: '2h ago' },
-      { id: 102, author: 'Sofia', text: 'Posted upcoming review quiz reminders.', time: '5h ago' }
+      { id: 101, author: 'Alex ', text: 'Shared a geometry study guide.', time: '2h ago' },
+      { id: 102, author: 'Sofia ', text: 'Posted upcoming review quiz reminders.', time: '5h ago' }
     ]
   },
   {
@@ -19,7 +19,7 @@ const DEFAULT_GROUPS = [
     description: 'Study group for biology and lab prep.',
     members: ['Mia'],
     activity: [
-      { id: 201, author: 'Mia', text: 'Scheduled a live session for Saturday.', time: '1d ago' }
+      { id: 201, author: 'Mia ', text: 'Scheduled a live session for Saturday.', time: '1d ago' }
     ]
   }
 ];
@@ -58,6 +58,8 @@ function Groups() {
 
   const selectedGroup = groups.find((group) => group.id === selectedGroupId);
   const isMember = selectedGroup?.members.includes(currentUser);
+  const joinedGroups = groups.filter((group) => group.members.includes(currentUser));
+  const otherGroups = groups.filter((group) => !group.members.includes(currentUser));
 
   const allGroupActivity = useMemo(() => {
     return groups
@@ -116,17 +118,8 @@ function Groups() {
     showStatus(`Group "${name}" created.`);
   };
 
-  const handleJoinGroup = () => {
-    const targetName = joinGroupName.trim();
-
-    if (!targetName) {
-      return showError('Enter a group name to join.');
-    }
-
-    const groupIndex = groups.findIndex(
-      (group) => group.name.toLowerCase() === targetName.toLowerCase()
-    );
-
+  const handleJoinGroupById = (groupId) => {
+    const groupIndex = groups.findIndex((group) => group.id === groupId);
     if (groupIndex === -1) {
       return showError('Group not found.');
     }
@@ -150,14 +143,41 @@ function Groups() {
       ]
     };
 
-    setGroups((prev) => [
-      ...prev.slice(0, groupIndex),
-      updatedGroup,
-      ...prev.slice(groupIndex + 1)
-    ]);
-    setSelectedGroupId(group.id);
-    setJoinGroupName('');
+    setGroups((prev) =>
+      prev.map((item) => (item.id === groupId ? updatedGroup : item))
+    );
+    setSelectedGroupId(groupId);
     showStatus(`Joined "${group.name}".`);
+  };
+
+  const handleJoinSelectedGroup = () => {
+    if (!selectedGroup) {
+      return showError('Select a group first.');
+    }
+    if (isMember) {
+      return showError('You are already a member of this group.');
+    }
+
+    handleJoinGroupById(selectedGroup.id);
+  };
+
+  const handleJoinGroup = () => {
+    const targetName = joinGroupName.trim();
+
+    if (!targetName) {
+      return showError('Enter a group name to join.');
+    }
+
+    const group = groups.find(
+      (groupItem) => groupItem.name.toLowerCase() === targetName.toLowerCase()
+    );
+
+    if (!group) {
+      return showError('Group not found.');
+    }
+
+    handleJoinGroupById(group.id);
+    setJoinGroupName('');
   };
 
   const handleLeaveGroup = () => {
@@ -187,7 +207,13 @@ function Groups() {
 
   const handleAddActivity = () => {
     const text = activityText.trim();
-    if (!selectedGroup || !text) {
+    if (!selectedGroup) {
+      return showError('Select a group before sharing activity.');
+    }
+    if (!isMember) {
+      return showError('Join the group before posting activity.');
+    }
+    if (!text) {
       return showError('Type a message before posting.');
     }
 
@@ -226,21 +252,50 @@ function Groups() {
 
         <div className="groups-layout">
           <div className="groups-sidebar">
-            <h3>Available Groups</h3>
-            {groups.map((group) => (
-              <div
-                key={group.id}
-                className={`group-item ${group.id === selectedGroupId ? 'group-selected' : ''}`}
-                onClick={() => setSelectedGroupId(group.id)}
-              >
-                <strong>{group.name}</strong>
-                <p>{group.description}</p>
-                <small>
-                  {group.members.length} members
-                  {group.members.includes(currentUser) ? ' · Joined' : ''}
-                </small>
-              </div>
-            ))}
+            <h3>Joined Groups</h3>
+            {joinedGroups.length === 0 ? (
+              <div className="empty-state">You haven’t joined any groups yet.</div>
+            ) : (
+              joinedGroups.map((group) => (
+                <div
+                  key={group.id}
+                  className={`group-item ${group.id === selectedGroupId ? 'group-selected' : ''}`}
+                  onClick={() => setSelectedGroupId(group.id)}
+                >
+                  <strong>{group.name}</strong>
+                  <p>{group.description}</p>
+                  <small>{group.members.length} members · Joined</small>
+                </div>
+              ))
+            )}
+
+            <h3 style={{ marginTop: '24px' }}>Other Groups</h3>
+            {otherGroups.length === 0 ? (
+              <div className="empty-state">No groups available to join.</div>
+            ) : (
+              otherGroups.map((group) => (
+                <div
+                  key={group.id}
+                  className={`group-item ${group.id === selectedGroupId ? 'group-selected' : ''}`}
+                  onClick={() => setSelectedGroupId(group.id)}
+                >
+                  <strong>{group.name}</strong>
+                  <p>{group.description}</p>
+                  <div className="group-item-footer">
+                    <small>{group.members.length} members</small>
+                    <button
+                      className="task-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleJoinGroupById(group.id);
+                      }}
+                    >
+                      Join
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="groups-detail">
@@ -283,13 +338,23 @@ function Groups() {
                 <div className="group-feed">
                   <div className="group-feed-header">
                     <h2>{selectedGroup.name}</h2>
-                    <button
-                      className="login-button secondary-btn"
-                      onClick={handleLeaveGroup}
-                      disabled={!isMember}
-                    >
-                      {isMember ? 'Leave Group' : 'Not a member'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {!isMember && (
+                        <button
+                          className="login-button secondary-btn"
+                          onClick={handleJoinSelectedGroup}
+                        >
+                          Join this group
+                        </button>
+                      )}
+                      <button
+                        className="login-button secondary-btn"
+                        onClick={handleLeaveGroup}
+                        disabled={!isMember}
+                      >
+                        {isMember ? 'Leave Group' : 'Not a member'}
+                      </button>
+                    </div>
                   </div>
                   <p>{selectedGroup.description}</p>
                   <p>
@@ -301,10 +366,11 @@ function Groups() {
                       className="login-input"
                       rows="3"
                       value={activityText}
-                      placeholder="Share group progress or plans..."
+                      placeholder={isMember ? 'Share group progress or plans...' : 'Join the group to post activity'}
                       onChange={(e) => setActivityText(e.target.value)}
+                      disabled={!isMember}
                     />
-                    <button className="login-button" onClick={handleAddActivity}>
+                    <button className="login-button" onClick={handleAddActivity} disabled={!isMember}>
                       Post to group
                     </button>
                   </div>
