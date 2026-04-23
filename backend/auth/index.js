@@ -87,5 +87,34 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Protected route: Update user profile
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const updates = {};
+    const { username, email, password } = req.body;
+
+    if (username) updates.username = username;
+    if(email) updates.email = email;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      updates.password = await bcrypt.hash(password, salt);
+    }
+
+    const updateUser = await User.findByIdAndUpdate(
+      req.user.userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+
+    ).select('-password');
+
+    if (!updateUser) {  
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json({ message: 'Profile updated!', user: updateUser });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
 // Export the router to be used in server.js
 module.exports = router;
