@@ -1,64 +1,81 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
+import { apiFetch } from './api';
 
 function Tasks() {
+  const savedUser = JSON.parse(window.localStorage.getItem('studysync_user') || 'null');
+  const userId = savedUser?._id || '';
+
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
-  const [editIndex, setEditIndex] = useState(null);
+  const [editId, setEditId] = useState(null);
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      const { response, data } = await apiFetch('/api/tasks');
+      if (response.ok && Array.isArray(data)) {
+        const mine = userId ? data.filter((t) => String(t.user) === String(userId)) : data;
+        setTasks(mine);
+      }
+    };
+    loadTasks();
+  }, [userId]);
 
   const handleAddTask = async () => {
-    if (!newTask) return;
+    const title = newTask.trim();
+    if (!title) return;
 
-    try {
-      await fetch('http://localhost:5000/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: newTask })
-      });
-
-      setTasks([...tasks, { text: newTask, completed: false }]);
+    const { response, data } = await apiFetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, user: userId || undefined })
+    });
+    if (response.ok) {
+      setTasks((prev) => [...prev, data]);
       setNewTask('');
-    } catch (err) {
-      console.log(err);
     }
   };
 
-  const handleDelete = async (index) => {
-    await fetch(`http://localhost:5000/api/tasks/${index}`, {
-      method: 'DELETE'
-    });
-
-    setTasks(tasks.filter((_, i) => i !== index));
+  const handleDelete = async (id) => {
+    const { response } = await apiFetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      setTasks((prev) => prev.filter((t) => t._id !== id));
+    }
   };
 
-  const handleToggle = async (index) => {
-    await fetch(`http://localhost:5000/api/tasks/${index}`, {
-      method: 'PUT'
+  const handleToggle = async (id) => {
+    const task = tasks.find((t) => t._id === id);
+    if (!task) return;
+    const { response, data } = await apiFetch(`/api/tasks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: !task.completed })
     });
-
-    const updated = [...tasks];
-    updated[index].completed = !updated[index].completed;
-    setTasks(updated);
+    if (response.ok) {
+      setTasks((prev) => prev.map((t) => (t._id === id ? data : t)));
+    }
   };
 
-  const handleEdit = (index) => {
-    setNewTask(tasks[index].text);
-    setEditIndex(index);
+  const handleEdit = (id) => {
+    const task = tasks.find((t) => t._id === id);
+    if (!task) return;
+    setNewTask(task.title);
+    setEditId(id);
   };
 
   const handleSaveEdit = async () => {
-    await fetch(`http://localhost:5000/api/tasks/${editIndex}`, {
+    const title = newTask.trim();
+    if (!title || !editId) return;
+    const { response, data } = await apiFetch(`/api/tasks/${editId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: newTask })
+      body: JSON.stringify({ title })
     });
-
-    const updated = [...tasks];
-    updated[editIndex].text = newTask;
-
-    setTasks(updated);
-    setEditIndex(null);
-    setNewTask('');
+    if (response.ok) {
+      setTasks((prev) => prev.map((t) => (t._id === editId ? data : t)));
+      setEditId(null);
+      setNewTask('');
+    }
   };
 
   return (
@@ -72,7 +89,7 @@ function Tasks() {
         onChange={(e) => setNewTask(e.target.value)}
       />
 
-      {editIndex === null ? (
+      {editId === null ? (
         <button className="login-button" onClick={handleAddTask}>
           Add Task
         </button>
@@ -84,16 +101,16 @@ function Tasks() {
 
       <hr className="divider" />
 
-      {tasks.map((task, i) => (
-        <div key={i} className="task-row">
+      {tasks.map((task) => (
+        <div key={task._id} className="task-row">
           <span className={`task-text ${task.completed ? 'completed' : ''}`}>
-            {task.text}
+            {task.title}
           </span>
 
           <div>
-            <button className="task-btn" onClick={() => handleToggle(i)}>✔</button>
-            <button className="task-btn" onClick={() => handleEdit(i)}>✏️</button>
-            <button className="task-btn delete" onClick={() => handleDelete(i)}>✖</button>
+            <button className="task-btn" onClick={() => handleToggle(task._id)}>✔</button>
+            <button className="task-btn" onClick={() => handleEdit(task._id)}>✏️</button>
+            <button className="task-btn delete" onClick={() => handleDelete(task._id)}>✖</button>
           </div>
         </div>
       ))}

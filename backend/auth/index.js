@@ -57,7 +57,11 @@ router.post('/login', async (req, res) => {
     process.env.JWT_SECRET,
     { expiresIn: '1h' }
   );
-  res.status(200).json({ message: 'Login successful', token });
+  res.status(200).json({
+    message: 'Login successful',
+    token,
+    user: { _id: user._id, username: user.username, email: user.email }
+  });
 });
 
 // JWT verification middleware

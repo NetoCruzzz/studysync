@@ -3,29 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import { apiFetch } from './api';
 
-const defaultPosts = [
-  {
-    id: 1,
-    author: 'Alex',
-    content: 'Finished my math review today. Feeling good!',
-    comments: [
-      { id: 11, author: 'Mia', text: 'Nice work!' },
-      { id: 12, author: 'Jay', text: 'Keep it up!' }
-    ],
-    likes: 3,
-    likedByMe: false
-  },
-  {
-    id: 2,
-    author: 'Sofia',
-    content: 'Anyone want to join a study session for biology?',
-    comments: [{ id: 21, author: 'Noah', text: 'Count me in!' }],
-    likes: 1,
-    likedByMe: false
-  }
-];
-
-const STORAGE_KEY = 'studysync_feed_posts';
 const USER_KEY = 'studysync_user';
 
 function Feed() {
@@ -34,34 +11,25 @@ function Feed() {
   const savedUser = JSON.parse(window.localStorage.getItem(USER_KEY) || 'null');
   const currentUser = location.state?.username || savedUser?.username || 'You';
 
-  const [posts, setPosts] = useState(defaultPosts);
+  const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [commentText, setCommentText] = useState({});
+  const [likes, setLikes] = useState({});
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setPosts(JSON.parse(stored));
-      setLoading(false);
-      return;
-    }
-
     const loadFeed = async () => {
       try {
-        const { response: res, data } = await apiFetch('/api/feed');
-        if (res.ok) {
-          const serverPosts = Array.isArray(data.posts)
-            ? data.posts
-            : Array.isArray(data)
-            ? data
-            : defaultPosts;
-          setPosts(serverPosts);
+        const { response, data } = await apiFetch('/api/feed');
+        if (response.ok && Array.isArray(data)) {
+          setPosts(data);
+        } else {
+          setError('Unable to load feed.');
         }
       } catch {
-        setError('Unable to load feed from server; using local data.');
+        setError('Unable to load feed from server.');
       } finally {
         setLoading(false);
       }
@@ -69,40 +37,26 @@ function Feed() {
     loadFeed();
   }, []);
 
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-  }, [posts]);
-
   const showStatus = (message) => {
     setStatus(message);
     setTimeout(() => setStatus(''), 1800);
   };
 
   const handleCreatePost = async () => {
-    const trimmed = newPost.trim();
-    if (!trimmed) return;
+    const content = newPost.trim();
+    if (!content) return;
 
-    const created = {
-      id: Date.now(),
-      author: currentUser,
-      content: trimmed,
-      comments: [],
-      likes: 0,
-      likedByMe: false
-    };
-
-    setPosts((prev) => [created, ...prev]);
-    setNewPost('');
-    showStatus('Post created');
-
-    try {
-      await apiFetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: trimmed })
-      });
-    } catch {
-      // frontend-only fallback
+    const { response, data } = await apiFetch('/api/feed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author: currentUser, content })
+    });
+    if (response.ok) {
+      setPosts((prev) => [data, ...prev]);
+      setNewPost('');
+      showStatus('Post created');
+    } else {
+      setError(data?.error || 'Failed to create post.');
     }
   };
 
@@ -110,40 +64,33 @@ function Feed() {
     const text = (commentText[postId] || '').trim();
     if (!text) return;
 
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              comments: [...post.comments, { id: Date.now(), author: currentUser, text }]
-            }
-          : post
-      )
-    );
-
-    setCommentText((prev) => ({ ...prev, [postId]: '' }));
-    showStatus('Comment added');
-
-    try {
-      await apiFetch(`/api/feed/${postId}/comment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-    } catch {
-      // frontend-only fallback
+    const { response, data } = await apiFetch(`/api/feed/${postId}/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author: currentUser, text })
+    });
+    if (response.ok) {
+      setPosts((prev) =>
+        prev.map((post) =>
+          post._id === postId
+            ? { ...post, comments: [...(post.comments || []), data] }
+            : post
+        )
+      );
+      setCommentText((prev) => ({ ...prev, [postId]: '' }));
+      showStatus('Comment added');
+    } else {
+      setError(data?.error || 'Failed to add comment.');
     }
   };
 
   const handleToggleLike = (postId) => {
-    setPosts((prev) =>
-      prev.map((post) => {
-        if (post.id !== postId) return post;
-        const likedByMe = !post.likedByMe;
-        const likes = likedByMe ? post.likes + 1 : Math.max(post.likes - 1, 0);
-        return { ...post, likedByMe, likes };
-      })
-    );
+    setLikes((prev) => {
+      const current = prev[postId] || { count: 0, mine: false };
+      const mine = !current.mine;
+      const count = mine ? current.count + 1 : Math.max(current.count - 1, 0);
+      return { ...prev, [postId]: { count, mine } };
+    });
   };
 
   return (
@@ -173,53 +120,59 @@ function Feed() {
           </button>
         </div>
 
-        {posts.length === 0 ? (
+        {!loading && posts.length === 0 ? (
           <div className="empty-state">No posts yet. Start the conversation!</div>
         ) : (
-          posts.map((post) => (
-            <div key={post.id} className="feed-post">
-              <div className="post-header">
-                <strong>{post.author}</strong>
-              </div>
-              <p>{post.content}</p>
+          posts.map((post) => {
+            const like = likes[post._id] || { count: 0, mine: false };
+            return (
+              <div key={post._id} className="feed-post">
+                <div className="post-header">
+                  <strong>{post.author}</strong>
+                  {post.createdAt && (
+                    <span>{new Date(post.createdAt).toLocaleString()}</span>
+                  )}
+                </div>
+                <p>{post.content}</p>
 
-              <div className="post-actions">
-                <button className="task-btn" onClick={() => handleToggleLike(post.id)}>
-                  {post.likedByMe ? 'Unlike' : 'Like'} ({post.likes})
-                </button>
-              </div>
-
-              <div className="comments-section">
-                <h4>Comments</h4>
-                {post.comments.length === 0 ? (
-                  <div className="empty-state">No comments yet.</div>
-                ) : (
-                  post.comments.map((comment) => (
-                    <div key={comment.id} className="comment-item">
-                      <strong>{comment.author}:</strong> {comment.text}
-                    </div>
-                  ))
-                )}
-
-                <div className="comment-input-row">
-                  <input
-                    className="login-input"
-                    value={commentText[post.id] || ''}
-                    placeholder="Write a comment..."
-                    onChange={(e) =>
-                      setCommentText((prev) => ({
-                        ...prev,
-                        [post.id]: e.target.value
-                      }))
-                    }
-                  />
-                  <button className="login-button" onClick={() => handleAddComment(post.id)}>
-                    Comment
+                <div className="post-actions">
+                  <button className="task-btn" onClick={() => handleToggleLike(post._id)}>
+                    {like.mine ? 'Unlike' : 'Like'} ({like.count})
                   </button>
                 </div>
+
+                <div className="comments-section">
+                  <h4>Comments</h4>
+                  {(!post.comments || post.comments.length === 0) ? (
+                    <div className="empty-state">No comments yet.</div>
+                  ) : (
+                    post.comments.map((comment, idx) => (
+                      <div key={comment._id || idx} className="comment-item">
+                        <strong>{comment.author}:</strong> {comment.text}
+                      </div>
+                    ))
+                  )}
+
+                  <div className="comment-input-row">
+                    <input
+                      className="login-input"
+                      value={commentText[post._id] || ''}
+                      placeholder="Write a comment..."
+                      onChange={(e) =>
+                        setCommentText((prev) => ({
+                          ...prev,
+                          [post._id]: e.target.value
+                        }))
+                      }
+                    />
+                    <button className="login-button" onClick={() => handleAddComment(post._id)}>
+                      Comment
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
