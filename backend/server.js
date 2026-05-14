@@ -45,6 +45,10 @@ app.listen(PORT, () => {
 });
 
 // Connect to MongoDB using Mongoose
+const seedDemoData = require('./seed');
 mongoose.connect('mongodb://localhost:27017/studysync')
-  .then(() => console.log('MongoDB connected!'))
+  .then(async () => {
+    console.log('MongoDB connected!');
+    await seedDemoData();
+  })
   .catch((err) => console.error('MongoDB connection error:', err));

@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Tasks from './Tasks';
 import './App.css';
+import { apiFetch } from './api';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -9,20 +10,45 @@ function Dashboard() {
 
   const savedUser = JSON.parse(window.localStorage.getItem('studysync_user') || 'null');
   const user = location.state || savedUser || { username: 'Guest', email: '' };
+  const currentUserId = user._id || '';
 
-  const groups = JSON.parse(window.localStorage.getItem('studysync_groups') || '[]');
-  const joinedGroups = groups.filter((group) => group.members.includes(user.username));
+  const [groups, setGroups] = useState([]);
+
+  useEffect(() => {
+    const loadGroups = async () => {
+      const { response, data } = await apiFetch('/api/groups');
+      if (response.ok && Array.isArray(data)) {
+        setGroups(data);
+      }
+    };
+    loadGroups();
+  }, []);
+
+  const joinedGroups = useMemo(
+    () =>
+      groups.filter((group) =>
+        (group.members || []).some((m) => (m._id || m) === currentUserId)
+      ),
+    [groups, currentUserId]
+  );
+
   const recentActivity = useMemo(() => {
     return joinedGroups
       .flatMap((group) =>
-        group.activity.map((item) => ({
+        (group.activity || []).map((item, idx) => ({
           ...item,
-          groupName: group.name
+          groupName: group.name,
+          id: item._id || idx
         }))
       )
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 3);
   }, [joinedGroups]);
+
+  const handleLogout = () => {
+    window.localStorage.removeItem('studysync_token');
+    navigate('/');
+  };
 
   return (
     <div className="dashboard-container">
@@ -52,7 +78,7 @@ function Dashboard() {
             <h3>My groups</h3>
             <div className="group-chip-row">
               {joinedGroups.map((group) => (
-                <span key={group.id} className="group-chip">
+                <span key={group._id} className="group-chip">
                   {group.name}
                 </span>
               ))}
@@ -64,7 +90,7 @@ function Dashboard() {
           <div className="dashboard-mini-card">
             <h3>Recent activity</h3>
             {recentActivity.map((item) => (
-              <div key={item.id} className="activity-row">
+              <div key={`${item.groupName}-${item.id}`} className="activity-row">
                 <strong>{item.author}</strong> in <em>{item.groupName}</em>: {item.text}
               </div>
             ))}
@@ -91,7 +117,7 @@ function Dashboard() {
           </Link>
         </div>
 
-        <button className="logout-btn" onClick={() => navigate('/')}>
+        <button className="logout-btn" onClick={handleLogout}>
           Logout
         </button>
       </div>

@@ -32,6 +32,20 @@ router.post('/:groupId/join', async (req, res) => {
   res.json(group);
 });
 
+// Leave a group
+router.post('/:groupId/leave', async (req, res) => {
+  const { userId, username } = req.body;
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const group = await Group.findById(req.params.groupId);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+  group.members = group.members.filter((m) => String(m) !== String(userId));
+  if (username) {
+    group.activity.push({ author: username, text: 'Left the group.' });
+  }
+  await group.save();
+  res.json(group);
+});
+
 // Add activity to group
 router.post('/:groupId/activity', async (req, res) => {
   const { author, text } = req.body;

@@ -120,25 +120,17 @@ function Groups() {
     if (!selectedGroup || !isMember) {
       return showError('You are not a member of this group.');
     }
-    // For demo: just remove user from group members and update activity
-    // Ideally, implement a backend route for leaving a group
-    const updatedMembers = selectedGroup.members.filter((m) => (m._id || m) !== currentUserId);
-    const updatedActivity = [
-      ...selectedGroup.activity,
-      {
-        author: currentUser,
-        text: 'Left the group.',
-        date: new Date().toISOString()
-      }
-    ];
-    setGroups((prev) =>
-      prev.map((group) =>
-        group._id === selectedGroup._id
-          ? { ...group, members: updatedMembers, activity: updatedActivity }
-          : group
-      )
-    );
-    showStatus(`Left "${selectedGroup.name}".`);
+    const { response, data } = await apiFetch(`/api/groups/${selectedGroup._id}/leave`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId, username: currentUser })
+    });
+    if (response.ok) {
+      setGroups((prev) => prev.map((g) => (g._id === selectedGroup._id ? data : g)));
+      showStatus(`Left "${selectedGroup.name}".`);
+    } else {
+      showError(data?.error || 'Failed to leave group.');
+    }
   };
 
   const handleAddActivity = async () => {

@@ -120,5 +120,18 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Protected route: Delete user account
+router.delete('/profile', authenticateToken, async (req, res) => {
+  try {
+    const deleted = await User.findByIdAndDelete(req.user.userId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json({ message: 'Account deleted.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
 // Export the router to be used in server.js
 module.exports = router;
