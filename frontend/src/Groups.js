@@ -1,75 +1,58 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
-
-const DEFAULT_GROUPS = [
-  {
-    id: 1,
-    name: 'Math Masters',
-    description: 'Weekly problem-solving study sessions.',
-    members: ['Alex', 'Sofia'],
-    activity: [
-      { id: 101, author: 'Alex ', text: 'Shared a geometry study guide.', time: '2h ago' },
-      { id: 102, author: 'Sofia ', text: 'Posted upcoming review quiz reminders.', time: '5h ago' }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Bio Buddies',
-    description: 'Study group for biology and lab prep.',
-    members: ['Mia'],
-    activity: [
-      { id: 201, author: 'Mia ', text: 'Scheduled a live session for Saturday.', time: '1d ago' }
-    ]
-  }
-];
-
-const STORAGE_KEY = 'studysync_groups';
-const USER_KEY = 'studysync_user';
+import { apiFetch } from './api';
 
 function Groups() {
   const navigate = useNavigate();
-  const savedUser = JSON.parse(window.localStorage.getItem(USER_KEY) || 'null');
+  const savedUser = JSON.parse(window.localStorage.getItem('studysync_user') || 'null');
   const currentUser = savedUser?.username || 'You';
+  const currentUserId = savedUser?._id || savedUser?.id || '';
 
-  const [groups, setGroups] = useState(DEFAULT_GROUPS);
-  const [selectedGroupId, setSelectedGroupId] = useState(DEFAULT_GROUPS[0].id);
+  const [groups, setGroups] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
   const [joinGroupName, setJoinGroupName] = useState('');
   const [activityText, setActivityText] = useState('');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setGroups(parsed);
-      if (parsed.length) {
-        setSelectedGroupId(parsed[0].id);
+    const fetchGroups = async () => {
+      setLoading(true);
+      const { response, data } = await apiFetch('/api/groups');
+      if (response.ok && Array.isArray(data)) {
+        setGroups(data);
+        if (data.length) setSelectedGroupId(data[0]._id || data[0].id);
+      } else {
+        setError('Failed to load groups');
       }
-    }
+      setLoading(false);
+    };
+    fetchGroups();
   }, []);
 
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
-  }, [groups]);
+  const selectedGroup = useMemo(
+    () => groups.find((group) => group._id === selectedGroupId || group.id === selectedGroupId),
+    [groups, selectedGroupId]
+  );
 
-  const selectedGroup = groups.find((group) => group.id === selectedGroupId);
-  const isMember = selectedGroup?.members.includes(currentUser);
-  const joinedGroups = groups.filter((group) => group.members.includes(currentUser));
-  const otherGroups = groups.filter((group) => !group.members.includes(currentUser));
+  const isMember = selectedGroup
+    ? selectedGroup.members.some((m) => (m._id || m) === currentUserId || m === currentUser)
+    : false;
 
   const allGroupActivity = useMemo(() => {
     return groups
       .flatMap((group) =>
-        group.activity.map((activity) => ({
+        (group.activity || []).map((activity, idx) => ({
           ...activity,
-          groupName: group.name
+          groupName: group.name,
+          id: activity._id || idx
         }))
       )
-      .sort((a, b) => b.id - a.id);
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   }, [groups]);
 
   const showStatus = (message) => {
@@ -84,128 +67,86 @@ function Groups() {
     setTimeout(() => setError(''), 1800);
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     const name = newGroupName.trim();
     const description = newGroupDescription.trim();
-
     if (!name || !description) {
       return showError('Please enter a group name and description.');
     }
-
-    if (groups.some((group) => group.name.toLowerCase() === name.toLowerCase())) {
-      return showError('That group name already exists.');
+    if (!currentUserId) {
+      return showError('You must be logged in to create a group.');
     }
 
-    const newGroup = {
-      id: Date.now(),
-      name,
-      description,
-      members: [currentUser],
-      activity: [
-        {
-          id: Date.now() + 1,
-          author: currentUser,
-          text: `Created the ${name} group.`,
-          time: 'Just now'
-        }
-      ]
-    };
+    const { response, data } = await apiFetch('/api/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description, userId: currentUserId })
+    });
 
-    setGroups((prev) => [newGroup, ...prev]);
-    setSelectedGroupId(newGroup.id);
-    setNewGroupName('');
-    setNewGroupDescription('');
-    showStatus(`Group "${name}" created.`);
+    if (response.ok) {
+      setGroups((prev) => [data, ...prev]);
+      setSelectedGroupId(data._id || data.id);
+      setNewGroupName('');
+      setNewGroupDescription('');
+      showStatus(`Group "${name}" created.`);
+    } else {
+      showError(data?.error || 'Failed to create group.');
+    }
   };
 
-  const handleJoinGroupById = (groupId) => {
-    const groupIndex = groups.findIndex((group) => group.id === groupId);
-    if (groupIndex === -1) {
-      return showError('Group not found.');
-    }
-
-    const group = groups[groupIndex];
-    if (group.members.includes(currentUser)) {
-      return showError('You are already a member of this group.');
-    }
-
-    const updatedGroup = {
-      ...group,
-      members: [...group.members, currentUser],
-      activity: [
-        ...group.activity,
-        {
-          id: Date.now(),
-          author: currentUser,
-          text: 'Joined the group.',
-          time: 'Just now'
-        }
-      ]
-    };
-
-    setGroups((prev) =>
-      prev.map((item) => (item.id === groupId ? updatedGroup : item))
-    );
-    setSelectedGroupId(groupId);
-    showStatus(`Joined "${group.name}".`);
-  };
-
-  const handleJoinSelectedGroup = () => {
-    if (!selectedGroup) {
-      return showError('Select a group first.');
-    }
-    if (isMember) {
-      return showError('You are already a member of this group.');
-    }
-
-    handleJoinGroupById(selectedGroup.id);
-  };
-
-  const handleJoinGroup = () => {
+  const handleJoinGroup = async () => {
     const targetName = joinGroupName.trim();
-
     if (!targetName) {
       return showError('Enter a group name to join.');
     }
+    if (!currentUserId) {
+      return showError('You must be logged in to join a group.');
+    }
 
-    const group = groups.find(
-      (groupItem) => groupItem.name.toLowerCase() === targetName.toLowerCase()
-    );
-
+    const group = groups.find((g) => g.name.toLowerCase() === targetName.toLowerCase());
     if (!group) {
       return showError('Group not found.');
     }
+    if (group.members.some((m) => (m._id || m) === currentUserId || m === currentUser)) {
+      return showError('You are already a member of this group.');
+    }
 
-    handleJoinGroupById(group.id);
-    setJoinGroupName('');
+    const { response, data } = await apiFetch(`/api/groups/${group._id || group.id}/join`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId, username: currentUser })
+    });
+
+    if (response.ok) {
+      setGroups((prev) => prev.map((g) => (g._id === (group._id || group.id) || g.id === (group._id || group.id) ? data : g)));
+      setSelectedGroupId(group._id || group.id);
+      setJoinGroupName('');
+      showStatus(`Joined "${group.name}".`);
+    } else {
+      showError(data?.error || 'Failed to join group.');
+    }
   };
 
-  const handleLeaveGroup = () => {
+  const handleLeaveGroup = async () => {
     if (!selectedGroup || !isMember) {
       return showError('You are not a member of this group.');
     }
+    const groupId = selectedGroup._id || selectedGroup.id;
+    const { response, data } = await apiFetch(`/api/groups/${groupId}/leave`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId, username: currentUser })
+    });
 
-    const updatedGroup = {
-      ...selectedGroup,
-      members: selectedGroup.members.filter((member) => member !== currentUser),
-      activity: [
-        ...selectedGroup.activity,
-        {
-          id: Date.now(),
-          author: currentUser,
-          text: 'Left the group.',
-          time: 'Just now'
-        }
-      ]
-    };
-
-    setGroups((prev) =>
-      prev.map((group) => (group.id === selectedGroup.id ? updatedGroup : group))
-    );
-    showStatus(`Left "${selectedGroup.name}".`);
+    if (response.ok) {
+      setGroups((prev) => prev.map((g) => (g._id === groupId || g.id === groupId ? data : g)));
+      showStatus(`Left "${selectedGroup.name}".`);
+    } else {
+      showError(data?.error || 'Failed to leave group.');
+    }
   };
 
-  const handleAddActivity = () => {
+  const handleAddActivity = async () => {
     const text = activityText.trim();
     if (!selectedGroup) {
       return showError('Select a group before sharing activity.');
@@ -217,24 +158,26 @@ function Groups() {
       return showError('Type a message before posting.');
     }
 
-    const updatedGroup = {
-      ...selectedGroup,
-      activity: [
-        {
-          id: Date.now(),
-          author: currentUser,
-          text,
-          time: 'Just now'
-        },
-        ...selectedGroup.activity
-      ]
-    };
+    const groupId = selectedGroup._id || selectedGroup.id;
+    const { response, data } = await apiFetch(`/api/groups/${groupId}/activity`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author: currentUser, text })
+    });
 
-    setGroups((prev) =>
-      prev.map((group) => (group.id === selectedGroup.id ? updatedGroup : group))
-    );
-    setActivityText('');
-    showStatus('Group activity shared.');
+    if (response.ok) {
+      setGroups((prev) =>
+        prev.map((group) =>
+          group._id === groupId || group.id === groupId
+            ? { ...group, activity: [data, ...(group.activity || [])] }
+            : group
+        )
+      );
+      setActivityText('');
+      showStatus('Group activity shared.');
+    } else {
+      showError(data?.error || 'Failed to post activity.');
+    }
   };
 
   return (
@@ -250,172 +193,146 @@ function Groups() {
         {status && <div className="message success">{status}</div>}
         {error && <div className="message error">{error}</div>}
 
-        <div className="groups-layout">
-          <div className="groups-sidebar">
-            <h3>Joined Groups</h3>
-            {joinedGroups.length === 0 ? (
-              <div className="empty-state">You haven’t joined any groups yet.</div>
-            ) : (
-              joinedGroups.map((group) => (
+        {loading ? (
+          <div>Loading groups...</div>
+        ) : (
+          <div className="groups-layout">
+            <div className="groups-sidebar">
+              <h3>Available Groups</h3>
+              {groups.map((group) => (
                 <div
-                  key={group.id}
-                  className={`group-item ${group.id === selectedGroupId ? 'group-selected' : ''}`}
-                  onClick={() => setSelectedGroupId(group.id)}
+                  key={group._id || group.id}
+                  className={`group-item ${group._id === selectedGroupId || group.id === selectedGroupId ? 'group-selected' : ''}`}
+                  onClick={() => setSelectedGroupId(group._id || group.id)}
                 >
                   <strong>{group.name}</strong>
                   <p>{group.description}</p>
-                  <small>{group.members.length} members · Joined</small>
+                  <small>
+                    {group.members.length} members
+                    {group.members.some((m) => (m._id || m) === currentUserId || m === currentUser) ? ' · Joined' : ''}
+                  </small>
                 </div>
-              ))
-            )}
-
-            <h3 style={{ marginTop: '24px' }}>Other Groups</h3>
-            {otherGroups.length === 0 ? (
-              <div className="empty-state">No groups available to join.</div>
-            ) : (
-              otherGroups.map((group) => (
-                <div
-                  key={group.id}
-                  className={`group-item ${group.id === selectedGroupId ? 'group-selected' : ''}`}
-                  onClick={() => setSelectedGroupId(group.id)}
-                >
-                  <strong>{group.name}</strong>
-                  <p>{group.description}</p>
-                  <div className="group-item-footer">
-                    <small>{group.members.length} members</small>
-                    <button
-                      className="task-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleJoinGroupById(group.id);
-                      }}
-                    >
-                      Join
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="groups-detail">
-            <div className="group-actions">
-              <div>
-                <h3>Create a group</h3>
-                <input
-                  className="login-input"
-                  value={newGroupName}
-                  placeholder="Group name"
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                />
-                <input
-                  className="login-input"
-                  value={newGroupDescription}
-                  placeholder="Group description"
-                  onChange={(e) => setNewGroupDescription(e.target.value)}
-                />
-                <button className="login-button" onClick={handleCreateGroup}>
-                  Create Group
-                </button>
-              </div>
-
-              <div>
-                <h3>Join a group</h3>
-                <input
-                  className="login-input"
-                  value={joinGroupName}
-                  placeholder="Existing group name"
-                  onChange={(e) => setJoinGroupName(e.target.value)}
-                />
-                <button className="login-button secondary-btn" onClick={handleJoinGroup}>
-                  Join Group
-                </button>
-              </div>
+              ))}
             </div>
 
-            {selectedGroup ? (
-              <>
-                <div className="group-feed">
-                  <div className="group-feed-header">
-                    <h2>{selectedGroup.name}</h2>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      {!isMember && (
-                        <button
-                          className="login-button secondary-btn"
-                          onClick={handleJoinSelectedGroup}
-                        >
-                          Join this group
+            <div className="groups-detail">
+              <div className="group-actions">
+                <div>
+                  <h3>Create a group</h3>
+                  <input
+                    className="login-input"
+                    value={newGroupName}
+                    placeholder="Group name"
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                  />
+                  <input
+                    className="login-input"
+                    value={newGroupDescription}
+                    placeholder="Group description"
+                    onChange={(e) => setNewGroupDescription(e.target.value)}
+                  />
+                  <button className="login-button" onClick={handleCreateGroup}>
+                    Create Group
+                  </button>
+                </div>
+
+                <div>
+                  <h3>Join a group</h3>
+                  <input
+                    className="login-input"
+                    value={joinGroupName}
+                    placeholder="Existing group name"
+                    onChange={(e) => setJoinGroupName(e.target.value)}
+                  />
+                  <button className="login-button secondary-btn" onClick={handleJoinGroup}>
+                    Join Group
+                  </button>
+                </div>
+              </div>
+
+              {selectedGroup ? (
+                <>
+                  <div className="group-feed">
+                    <div className="group-feed-header">
+                      <h2>{selectedGroup.name}</h2>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {!isMember && (
+                          <button
+                            className="login-button secondary-btn"
+                            onClick={() => {
+                              setJoinGroupName(selectedGroup.name);
+                              handleJoinGroup();
+                            }}
+                          >
+                            Join this group
+                          </button>
+                        )}
+                        <button className="login-button secondary-btn" onClick={handleLeaveGroup} disabled={!isMember}>
+                          {isMember ? 'Leave Group' : 'Not a member'}
                         </button>
-                      )}
-                      <button
-                        className="login-button secondary-btn"
-                        onClick={handleLeaveGroup}
+                      </div>
+                    </div>
+                    <p>{selectedGroup.description}</p>
+                    <p>
+                      <strong>Members:</strong> {selectedGroup.members.map((m) => m.username || m).join(', ')}
+                    </p>
+
+                    <div className="new-post-section">
+                      <textarea
+                        className="login-input"
+                        rows="3"
+                        value={activityText}
+                        placeholder={isMember ? 'Share group progress or plans...' : 'Join the group to post activity'}
+                        onChange={(e) => setActivityText(e.target.value)}
                         disabled={!isMember}
-                      >
-                        {isMember ? 'Leave Group' : 'Not a member'}
+                      />
+                      <button className="login-button" onClick={handleAddActivity} disabled={!isMember}>
+                        Post to group
                       </button>
                     </div>
-                  </div>
-                  <p>{selectedGroup.description}</p>
-                  <p>
-                    <strong>Members:</strong> {selectedGroup.members.join(', ')}
-                  </p>
 
-                  <div className="new-post-section">
-                    <textarea
-                      className="login-input"
-                      rows="3"
-                      value={activityText}
-                      placeholder={isMember ? 'Share group progress or plans...' : 'Join the group to post activity'}
-                      onChange={(e) => setActivityText(e.target.value)}
-                      disabled={!isMember}
-                    />
-                    <button className="login-button" onClick={handleAddActivity} disabled={!isMember}>
-                      Post to group
-                    </button>
+                    <div className="activity-feed">
+                      <h3>Group Activity</h3>
+                      {(!selectedGroup.activity || selectedGroup.activity.length === 0) ? (
+                        <div className="empty-state">No activity yet.</div>
+                      ) : (
+                        selectedGroup.activity.map((item, idx) => (
+                          <div key={item._id || idx} className="feed-post">
+                            <div className="post-header">
+                              <strong>{item.author}</strong>
+                              <span>{item.date ? new Date(item.date).toLocaleString() : ''}</span>
+                            </div>
+                            <p>{item.text}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
 
-                  <div className="activity-feed">
-                    <h3>Group Activity</h3>
-                    {selectedGroup.activity.length === 0 ? (
-                      <div className="empty-state">No activity yet.</div>
+                  <div className="all-activity-panel">
+                    <h3>All Groups Activity</h3>
+                    {allGroupActivity.length === 0 ? (
+                      <div className="empty-state">No activity across groups yet.</div>
                     ) : (
-                      selectedGroup.activity.map((item) => (
-                        <div key={item.id} className="feed-post">
+                      allGroupActivity.slice(0, 6).map((item) => (
+                        <div key={`${item.groupName}-${item.id}`} className="feed-post">
                           <div className="post-header">
                             <strong>{item.author}</strong>
-                            <span>{item.time}</span>
+                            <span>{item.date ? new Date(item.date).toLocaleString() : ''}</span>
                           </div>
                           <p>{item.text}</p>
+                          <small>in {item.groupName}</small>
                         </div>
                       ))
                     )}
                   </div>
-                </div>
-
-                <div className="all-activity-panel">
-                  <h3>All Groups Activity</h3>
-                  {allGroupActivity.length === 0 ? (
-                    <div className="empty-state">No activity across groups yet.</div>
-                  ) : (
-                    allGroupActivity.slice(0, 6).map((item) => (
-                      <div key={`${item.groupName}-${item.id}`} className="feed-post">
-                        <div className="post-header">
-                          <strong>{item.author}</strong>
-                          <span>{item.time}</span>
-                        </div>
-                        <p>{item.text}</p>
-                        <small>in {item.groupName}</small>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="empty-state">Select a group to see details.</div>
-            )}
+                </>
+              ) : (
+                <div className="empty-state">Select a group to see details.</div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

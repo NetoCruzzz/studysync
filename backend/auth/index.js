@@ -57,7 +57,11 @@ router.post('/login', async (req, res) => {
     process.env.JWT_SECRET,
     { expiresIn: '1h' }
   );
-  res.status(200).json({ message: 'Login successful', token });
+  res.status(200).json({
+    message: 'Login successful',
+    token,
+    user: { _id: user._id, username: user.username, email: user.email }
+  });
 });
 
 // JWT verification middleware
@@ -111,6 +115,19 @@ router.put('/profile', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
     res.json({ message: 'Profile updated!', user: updateUser });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+// Protected route: Delete user account
+router.delete('/profile', authenticateToken, async (req, res) => {
+  try {
+    const deleted = await User.findByIdAndDelete(req.user.userId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json({ message: 'Account deleted.' });
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }

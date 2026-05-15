@@ -17,8 +17,9 @@ const authRoutes = require('./auth'); // Adjust the path if needed
 // Import tasks router
 const tasksRouter = require('./tasks');
 
-// Import feed router
+// Import feed and groups routers
 const feedRouter = require('./auth/routes/feed');
+const groupsRouter = require('./auth/routes/groups');
 
 // Mount the authentication routes at /api/auth
 app.use('/api/auth', authRoutes);
@@ -26,8 +27,12 @@ app.use('/api/auth', authRoutes);
 // Mount the tasks routes at /api/tasks
 app.use('/api/tasks', tasksRouter);
 
+
 // Mount the feed routes at /api/feed
 app.use('/api/feed', feedRouter);
+
+// Mount the groups routes at /api/groups
+app.use('/api/groups', groupsRouter);
 
 // Default route for testing if the API is running
 app.get('/', (req, res) => {
@@ -40,6 +45,10 @@ app.listen(PORT, () => {
 });
 
 // Connect to MongoDB using Mongoose
+const seedDemoData = require('./seed');
 mongoose.connect('mongodb://localhost:27017/studysync')
-  .then(() => console.log('MongoDB connected!'))
+  .then(async () => {
+    console.log('MongoDB connected!');
+    await seedDemoData();
+  })
   .catch((err) => console.error('MongoDB connection error:', err));

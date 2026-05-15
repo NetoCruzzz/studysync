@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
+import { apiFetch } from './api';
 
 function Profile() {
   const navigate = useNavigate();
@@ -27,29 +28,49 @@ function Profile() {
     setTimeout(() => setMessage(''), 2600);
   };
 
-  const handleSave = () => {
-    if (!username.trim()) {
+  const handleSave = async () => {
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
       return showMessage('Username cannot be empty.', 'error');
     }
 
-    const userObject = {
-      username: username.trim(),
-      email: email.trim()
-    };
+    const body = { username: trimmedUsername, email: email.trim() };
+    if (password) body.password = password;
 
-    window.localStorage.setItem('studysync_user', JSON.stringify(userObject));
-    setPassword('');
-    showMessage('Profile saved successfully.');
-    navigate('/dashboard', { state: userObject });
+    const { response, data } = await apiFetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (response.ok && data?.user) {
+      const userObject = {
+        _id: data.user._id,
+        username: data.user.username,
+        email: data.user.email || ''
+      };
+      window.localStorage.setItem('studysync_user', JSON.stringify(userObject));
+      setPassword('');
+      showMessage('Profile saved successfully.');
+      setTimeout(() => navigate('/dashboard', { state: userObject }), 800);
+    } else {
+      showMessage(data?.error || 'Failed to save profile.', 'error');
+    }
   };
 
   const handleCancel = () => {
     navigate('/dashboard', { state: initialUser });
   };
 
-  const handleDeleteAccount = () => {
-    window.localStorage.removeItem('studysync_user');
-    navigate('/', { replace: true });
+  const handleDeleteAccount = async () => {
+    const { response, data } = await apiFetch('/api/auth/profile', { method: 'DELETE' });
+    if (response.ok) {
+      window.localStorage.removeItem('studysync_user');
+      window.localStorage.removeItem('studysync_token');
+      navigate('/', { replace: true });
+    } else {
+      showMessage(data?.error || 'Failed to delete account.', 'error');
+    }
   };
 
   return (

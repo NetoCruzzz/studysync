@@ -5,7 +5,12 @@ export function apiUrl(path) {
 }
 
 export async function apiFetch(path, options = {}) {
-  const response = await fetch(apiUrl(path), options);
+  const token = window.localStorage.getItem('studysync_token');
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+  const response = await fetch(apiUrl(path), { ...options, headers });
   const data = await response.json().catch(() => null);
   return { response, data };
 }

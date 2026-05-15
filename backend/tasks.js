@@ -1,43 +1,40 @@
 const express = require('express');
 const router = express.Router();
-
-// In-memory tasks array (replace with DB later)
-let tasks = [];
+const Task = require('./models/Task');
 
 // GET /api/tasks - Get all tasks
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+  const tasks = await Task.find();
   res.json(tasks);
 });
 
 // POST /api/tasks - Add a new task
-router.post('/', (req, res) => {
-  const { title, completed } = req.body;
+router.post('/', async (req, res) => {
+  const { title, completed, user } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
-  const newTask = { title, completed: !!completed };
-  tasks.push(newTask);
+  const newTask = new Task({ title, completed: !!completed, user });
+  await newTask.save();
   res.status(201).json(newTask);
 });
 
-// PUT /api/tasks/:index - Update a task
-router.put('/:index', (req, res) => {
-  const idx = parseInt(req.params.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= tasks.length) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
+// PUT /api/tasks/:id - Update a task
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
   const { title, completed } = req.body;
-  if (title !== undefined) tasks[idx].title = title;
-  if (completed !== undefined) tasks[idx].completed = completed;
-  res.json(tasks[idx]);
+  const task = await Task.findById(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  if (title !== undefined) task.title = title;
+  if (completed !== undefined) task.completed = completed;
+  await task.save();
+  res.json(task);
 });
 
-// DELETE /api/tasks/:index - Delete a task
-router.delete('/:index', (req, res) => {
-  const idx = parseInt(req.params.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= tasks.length) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
-  const deleted = tasks.splice(idx, 1);
-  res.json(deleted[0]);
+// DELETE /api/tasks/:id - Delete a task
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+  const task = await Task.findByIdAndDelete(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  res.json(task);
 });
 
 module.exports = router;

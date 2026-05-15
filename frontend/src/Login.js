@@ -30,19 +30,21 @@ function Login() {
 
       if (res.ok) {
         const userObject = {
-          username: data.username || username,
-          email: data.email || ''
+          _id: data.user?._id || '',
+          username: data.user?.username || username,
+          email: data.user?.email || ''
         };
         saveUser(userObject);
+        if (data.token) window.localStorage.setItem('studysync_token', data.token);
         setMessage('Login successful!');
         setMessageType('success');
         setTimeout(() => navigate('/dashboard', { state: userObject }), 700);
       } else {
-        setMessage(data?.message || 'Login failed');
+        setMessage(data?.error || data?.message || 'Login failed');
         setMessageType('error');
       }
     } catch (err) {
-      const userObject = { username, email: '' };
+      const userObject = { _id: '', username, email: '' };
       saveUser(userObject);
       setMessage('Backend not connected — simulating login');
       setMessageType('success');
