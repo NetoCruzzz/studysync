@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "PowerShell(Get-Process mongod -ErrorAction SilentlyContinue)",
+      "PowerShell(Test-NetConnection -ComputerName localhost -Port 27017 -InformationLevel Quiet -WarningAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 27017 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ LocalAddress=$_.LocalAddress; PID=$_.OwningProcess; ProcessName=$proc.ProcessName; Path=$proc.Path } })",
+      "PowerShell($paths = @\\('C:\\\\Program Files\\\\MongoDB\\\\Server\\\\7.0\\\\bin\\\\mongod.exe','C:\\\\Program Files\\\\MongoDB\\\\Server\\\\6.0\\\\bin\\\\mongod.exe','C:\\\\Program Files\\\\MongoDB\\\\Server\\\\5.0\\\\bin\\\\mongod.exe','C:\\\\Program Files\\\\MongoDB\\\\Server\\\\8.0\\\\bin\\\\mongod.exe'\\); $paths | Where-Object { Test-Path $_ })",
+      "PowerShell($searchPaths = @\\('C:\\\\Program Files\\\\MongoDB','C:\\\\MongoDB','C:\\\\Program Files \\(x86\\)\\\\MongoDB',\"$env:LOCALAPPDATA\\\\MongoDB\",\"$env:LOCALAPPDATA\\\\Programs\\\\MongoDB Compass\"\\); foreach \\($p in $searchPaths\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND: $p\"; Get-ChildItem $p -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName } })",
+      "PowerShell($base = 'C:\\\\Program Files\\\\MongoDB\\\\Server\\\\8.2'; foreach \\($sub in @\\('bin\\\\mongod.cfg', 'data\\\\db', 'log'\\)\\) { $p = Join-Path $base $sub; \"{0,-30} {1}\" -f $sub, $\\(if \\(Test-Path $p\\) { \"EXISTS: $p\" } else { \"MISSING\" }\\) })",
+      "PowerShell($dataDir = 'C:\\\\Users\\\\Ares\\\\mongodb-data\\\\db'; $logDir = 'C:\\\\Users\\\\Ares\\\\mongodb-data\\\\log'; New-Item -ItemType Directory -Force -Path $dataDir | Out-Null; New-Item -ItemType Directory -Force -Path $logDir | Out-Null; \"Created: $dataDir\"; \"Created: $logDir\")",
+      "PowerShell(Start-Process -FilePath 'C:\\\\Program Files\\\\MongoDB\\\\Server\\\\8.2\\\\bin\\\\mongod.exe' -ArgumentList @\\('--dbpath', 'C:\\\\Users\\\\Ares\\\\mongodb-data\\\\db', '--logpath', 'C:\\\\Users\\\\Ares\\\\mongodb-data\\\\log\\\\mongod.log', '--bind_ip', '127.0.0.1', '--port', '27017'\\) -WindowStyle Hidden; Start-Sleep -Seconds 3; Get-Process mongod -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 27017 -ErrorAction SilentlyContinue | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ State=$_.State; PID=$_.OwningProcess; ProcessName=$proc.ProcessName } })",
+      "PowerShell($proc = Get-Process mongod -ErrorAction SilentlyContinue; if \\($proc\\) { \"RUNNING: PID $\\($proc.Id\\), started $\\($proc.StartTime\\)\" } else { 'NOT RUNNING' }; Get-NetTCPConnection -LocalPort 27017 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, State, OwningProcess)",
+      "PowerShell($listener = Get-NetTCPConnection -LocalPort 27017 -State Listen -ErrorAction SilentlyContinue; if \\($listener\\) { $goodPid = $listener.OwningProcess; \"Port 27017 owned by PID: $goodPid\"; Get-Process mongod | Where-Object { $_.Id -ne $goodPid } | ForEach-Object { Stop-Process -Id $_.Id -Force; \"Stopped duplicate PID: $\\($_.Id\\)\" } } else { 'Nothing listening on 27017' })",
+      "PowerShell(Invoke-RestMethod -Uri 'http://localhost:5000/api/groups' -Method Get)",
+      "PowerShell(Invoke-RestMethod -Uri 'http://localhost:5000/api/feed' -Method Get | Select-Object @{N='Posts';E={$_.Count}}; Invoke-RestMethod -Uri 'http://localhost:5000/api/feed' -Method Get | ForEach-Object { \"- $\\($_.author\\): $\\($_.content\\)\" })",
+      "PowerShell($posts = Invoke-RestMethod -Uri 'http://localhost:5000/api/feed' -Method Get; \"Total posts: $\\($posts.Count\\)\"; foreach \\($p in $posts\\) { \"- $\\($p.author\\): $\\($p.content\\) [$\\($p.comments.Count\\) comments]\" })"
+    ]
+  }
+}
